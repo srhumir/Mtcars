@@ -23,12 +23,6 @@ Comparing the MPG of automatic transmissited cars vs manaully transsmitted ones 
 
 Let's look at the rough relation between transmission type and fuel economy.
 
-```{r echo=F, message=FALSE}
-library(reshape)
-meltedmtcars <- melt(mtcars, id.vars = c("mpg", "am"))
-p <- ggplot(meltedmtcars, aes(x=value, y=mpg, color=am)) + geom_point()
-p + facet_wrap( ~ variable, ncol = 3)
-```
 
 In particular in case of weight(wt) and rear axle ratio (drat) variables, one can see that they both have impact on MPG and on the other hand, they can roughly separate automatic and manually transmitted cars. In other words more weight means less mpg also cars with automatic transmission are heavier in this data set. So we use multivariable regression analysis to face this lack of data in the dataset.
 
@@ -54,12 +48,43 @@ mtcars2 <- mtcars[, -(maxvif+1)]
 fitlm2 <- lm(mpg ~ ., data = mtcars2)
 round(coef(fitlm2),2)
 ```
-Let us take a look at the VIF's of the new model.
+The amt coefficient is not that much changed and it is still insignificant with $95\%$ confidence interval of ($`r round(confint(fitlm2)[8,],2)`$). Let us take a look at the VIF's of the new model.
 ```{r echo=F, message=F}
 round(vif(fitlm2),2)
 maxvif2 <- which(vif(fitlm2)==max(vif(fitlm2)))
 ```
+cyl has still too high VIF. This time we ommit that. 
+```{r echo=F, message=F}
+mtcars3 <- mtcars2[, -(maxvif2+1)]
+fitlm3 <- lm(mpg ~ ., data = mtcars3)
+round(coef(fitlm3),2)
+```
+Again a small decrease in the am coefficient and still non-significant (confidence interbal: $`r round(confint(fitlm3)[7,],2)`$). What about VIF'f of this thord model.
+```{r echo=F, message=F}
+round(vif(fitlm3),2)
+maxvif3 <- which(vif(fitlm3)==max(vif(fitlm3)))
+```
 
 
+The VIF's of this last model are in a quite similar range. So there is no sense in ommiting any of them. Now for assurance we comare the first and last models with anova function.
+```{r echo=F, message=F}
+anova(fitlm3, fitlm1)
+```
+The P-value is quite high, so ommiting these two varaibales was not actually necessary. 
 
+To get sure abput the validity of the last model I plot the residual plot.
 
+```{r echo=F, message=F}
+plot(predict(fitlm3),resid(fitlm3), xlab = "Fitted values", ylab = "Residuals")
+abline(h=0, col="red")
+```
+As you can see there is no special trend in the residual plot. So the model appears to be valid. 
+
+#Conclution
+Although a manually transmitted car seems to show better fuel economy, this improvement does not appear to be significant. It should be noted that this analysis is done on an old and small dataset, so is not that realiable. For assurance more investigation needs to be done.
+```{r echo=F, message=FALSE}
+library(reshape)
+meltedmtcars <- melt(mtcars, id.vars = c("mpg", "am"))
+p <- ggplot(meltedmtcars, aes(x=value, y=mpg, color=am)) + geom_point()
+p + facet_wrap( ~ variable, ncol = 3)
+```
