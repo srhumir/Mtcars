@@ -1,8 +1,0 @@
----
-title: "MPG Analysis"
-author: "Reza"
-date: "20 Mai 2016"
-output: pdf_document
----
-
-#Summary

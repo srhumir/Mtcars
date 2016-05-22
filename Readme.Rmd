@@ -2,7 +2,7 @@
 title: "MPG Analysis"
 author: "Reza"
 date: "20 May 2016"
-output: md_document
+output: pdf_document
 ---
 
 #Summary
@@ -33,10 +33,33 @@ p + facet_wrap( ~ variable, ncol = 3)
 In particular in case of weight(wt) and rear axle ratio (drat) variables, one can see that they both have impact on MPG and on the other hand, they can roughly separate automatic and manually transmitted cars. In other words more weight means less mpg also cars with automatic transmission are heavier in this data set. So we use multivariable regression analysis to face this lack of data in the dataset.
 
 #Regression analysis
-```{r echo=FALSE, message=F}
-corMatrix <- cor(mtcars[,- c(1,8,9)])
-highlyCorrelated <- findCorrelation(corMatrix, cutoff = .8)
+
+For start we fit a linear model for mpg vs are other variables and look at the coefficients of the model.
+```{r echo=F, message=F}
+fitlm1 <- lm(mpg ~ ., data = mtcars)
+round(coef(fitlm1),2)
 ```
-We have 10 variables to include in the regression model. But clearly some of them are higky correlated which make unvanted variance in the model (for instance number of cylinders and horse power). I computed the corrolation between varoable and ommited those which are more than $80\%$ corrolated. Which ommit `r names(mtcars)[highlyCorrelated]` variables and leave me with `r names(mtcars)[-highlyCorrelated]`.
+
+It says that keeping other factors constant, the change from automatic transsmition to manuall increases mpg by `r round(coef(fitlm1)[9],2)` miles per gallon. But the confidence interval for this qoefiicent is (`r round(confint(fitlm1)[9,],2)`) containg $0$ which means that this improvement is not statisically significant. But there might be extra variables in the model which introduce extra variance. To seek for that we use the varible importance factor (VIF). These are the VIF for the model.
+
+```{r echo=F, message=F}
+library(car)
+round(vif(fitlm1),2)
+maxvif <- which(vif(fitlm1)==max(vif(fitlm1)))
+```
+
+`r names(vif(fitlm1))[maxvif]` has the most vif i.e. its impact on the model if $`r round(vif(fitlm1),2)[maxvif]`$ times more as if it was diagonal to other variables. Now we omit this variable and fit a new model.
+```{r echo=F, message=F}
+mtcars2 <- mtcars[, -(maxvif+1)]
+fitlm2 <- lm(mpg ~ ., data = mtcars2)
+round(coef(fitlm2),2)
+```
+Let us take a look at the VIF's of the new model.
+```{r echo=F, message=F}
+round(vif(fitlm2),2)
+maxvif2 <- which(vif(fitlm2)==max(vif(fitlm2)))
+```
+
+
 
 
