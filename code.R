@@ -44,3 +44,5 @@ lm <- train(mpg ~ . , method="lm",  data=newdata)
 lm
 coef(lm$finalModel)
 confint(lm$finalModel)
+
+t.test(mtcars$mpg[mtcars$am == 0], mtcars$mpg[mtcars$am == 1], paired = F)
