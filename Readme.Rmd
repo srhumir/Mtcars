@@ -2,7 +2,7 @@
 title: "MPG Analysis"
 author: "Reza"
 date: "20 May 2016"
-output: pdf_document
+output: md_document
 ---
 
 #Summary
@@ -33,4 +33,10 @@ p + facet_wrap( ~ variable, ncol = 3)
 In particular in case of weight(wt) and rear axle ratio (drat) variables, one can see that they both have impact on MPG and on the other hand, they can roughly separate automatic and manually transmitted cars. In other words more weight means less mpg also cars with automatic transmission are heavier in this data set. So we use multivariable regression analysis to face this lack of data in the dataset.
 
 #Regression analysis
-We have 10 variables to include in the regression model. 
+```{r echo=FALSE, message=F}
+corMatrix <- cor(mtcars[,- c(1,8,9)])
+highlyCorrelated <- findCorrelation(corMatrix, cutoff = .8)
+```
+We have 10 variables to include in the regression model. But clearly some of them are higky correlated which make unvanted variance in the model (for instance number of cylinders and horse power). I computed the corrolation between varoable and ommited those which are more than $80\%$ corrolated. Which ommit `r names(mtcars)[highlyCorrelated]` variables and leave me with `r names(mtcars)[-highlyCorrelated]`.
+
+
