@@ -6,7 +6,7 @@ output: pdf_document
 ---
 
 #Summary
-The goal of this study is to check whether automatic transmission has an impact on MPG in cars. We have a dataset of 32 cars with 11 measurement from each such as MPG, weight, displacement etc. We use regression analysis to check for the impact of transmission type on fuel consumption. 
+The goal of this study is to check whether automatic transmission has an impact on MPG in cars. We have a dataset of 32 cars with 11 measurement  such as MPG, weight, displacement etc from each. We use regression analysis to check for the impact of transmission type on fuel consumption. 
 
 At the end we will see that, although it seems at the first look that automatic transmission decreases MPG but this is not an statistically meaningful conclusion. 
 
@@ -14,21 +14,15 @@ At the end we will see that, although it seems at the first look that automatic 
 The data was extracted from the 1974 Motor Trend US magazine, and includes fuel consumotion (mpg), Number of cylinders(cyl), Displacement (disp), Gross horsepower(hp), Rear axle ratio (drat), Weight (wt), 1/4 mile time (qsec), V/S (vs), Transmission (am, 0 = automatic, 1 = manual), Number of forward gears (gear), Number of carburetorsof (carb),  for 32 automobiles (1973-74 models).
 
 ```{r echo=FALSE, message=F}
-library(caret)
 data(mtcars)
 mtcars$am <- factor(mtcars$am)
 mtcars$vs <- factor(mtcars$vs)
 ```
-Comparing the MPG of automatic transmissited cars vs manaully transsmitted ones (`r mean(mtcars$mpg[mtcars$am == 0])`, `r mean(mtcars$mpg[mtcars$am ==1])`) make us thick that automatic transsmission has a negaive imoact on fuel ecomomy. Bit let's take a look at MPG vs other variables 
-
-Let's look at the rough relation between transmission type and fuel economy.
-
-
-In particular in case of weight(wt) and rear axle ratio (drat) variables, one can see that they both have impact on MPG and on the other hand, they can roughly separate automatic and manually transmitted cars. In other words more weight means less mpg also cars with automatic transmission are heavier in this data set. So we use multivariable regression analysis to face this lack of data in the dataset.
+Comparing the MPG of automatic transmissited cars vs manaully transsmitted ones (`r mean(mtcars$mpg[mtcars$am == 0])`, `r mean(mtcars$mpg[mtcars$am ==1])`) make us think that automatic transsmission has a negaive imoact on fuel ecomomy. But having a closer look at the data set (see Fig. 1), reveals that in particular in the case of weight(wt) and rear axle ratio (drat) variables, in one hand they both have impact on MPG and on the other hand, they can roughly separate automatic and manually transmitted cars. In other words more weight means less mpg also cars with automatic transmission are heavier in this data set. So we use multivariable regression analysis to face this lack of data in the dataset.
 
 #Regression analysis
 
-For start we fit a linear model for mpg vs are other variables and look at the coefficients of the model.
+For start we fit a linear model for mpg vs all other variables and look at the coefficients of the model.
 ```{r echo=F, message=F}
 fitlm1 <- lm(mpg ~ ., data = mtcars)
 round(coef(fitlm1),2)
@@ -39,52 +33,45 @@ It says that keeping other factors constant, the change from automatic transsmit
 ```{r echo=F, message=F}
 library(car)
 round(vif(fitlm1),2)
-maxvif <- which(vif(fitlm1)==max(vif(fitlm1)))
+maxvif <- tail(order(vif(fitlm1)),2)
 ```
 
-`r names(vif(fitlm1))[maxvif]` has the most vif i.e. its impact on the model if $`r round(vif(fitlm1),2)[maxvif]`$ times more as if it was diagonal to other variables. Now we omit this variable and fit a new model.
+`r names(vif(fitlm1))[maxvif]` have the most vif i.e. their impact on the model is respectively  $`r round(vif(fitlm1),2)[maxvif]`$ times more as if they were  diagonal to other variables. Now we omit these variables and fit a new model.
 ```{r echo=F, message=F}
 mtcars2 <- mtcars[, -(maxvif+1)]
 fitlm2 <- lm(mpg ~ ., data = mtcars2)
 round(coef(fitlm2),2)
 ```
-The amt coefficient is not that much changed and it is still insignificant with $95\%$ confidence interval of ($`r round(confint(fitlm2)[8,],2)`$). Let us take a look at the VIF's of the new model.
+The amt coefficient is a bit smaller but not that much changed. It is still insignificant with $95\%$ confidence interval of ($`r round(confint(fitlm2)[7,],2)`$). Let us take a look at the VIF's of the new model.
 ```{r echo=F, message=F}
 round(vif(fitlm2),2)
 maxvif2 <- which(vif(fitlm2)==max(vif(fitlm2)))
 ```
-cyl has still too high VIF. This time we ommit that. 
-```{r echo=F, message=F}
-mtcars3 <- mtcars2[, -(maxvif2+1)]
-fitlm3 <- lm(mpg ~ ., data = mtcars3)
-round(coef(fitlm3),2)
-```
-Again a small decrease in the am coefficient and still non-significant (confidence interbal: $`r round(confint(fitlm3)[7,],2)`$). What about VIF'f of this thord model.
-```{r echo=F, message=F}
-round(vif(fitlm3),2)
-maxvif3 <- which(vif(fitlm3)==max(vif(fitlm3)))
-```
 
-
-The VIF's of this last model are in a quite similar range. So there is no sense in ommiting any of them. Now for assurance we comare the first and last models with anova function.
+The VIF's of this last model, although not ideally small,  are in a quite similar range. So there is no sense in ommiting any of them. Now for assurance we comare the  models with anova function.
 ```{r echo=F, message=F}
-anova(fitlm3, fitlm1)
+anova(fitlm2, fitlm1)
 ```
-The P-value is quite high, so ommiting these two varaibales was not actually necessary. 
+The P-value is quite high, so using these two varaibales was not actually necessary. 
 
-To get sure abput the validity of the last model I plot the residual plot.
-
-```{r echo=F, message=F}
-plot(predict(fitlm3),resid(fitlm3), xlab = "Fitted values", ylab = "Residuals")
-abline(h=0, col="red")
-```
-As you can see there is no special trend in the residual plot. So the model appears to be valid. 
+To get sure abput the validity of the last model I plot the residual plot (see Fig2).As you can see there is no special trend in the residual plot. So the model appears to be valid. 
 
 #Conclution
 Although a manually transmitted car seems to show better fuel economy, this improvement does not appear to be significant. It should be noted that this analysis is done on an old and small dataset, so is not that realiable. For assurance more investigation needs to be done.
-```{r echo=F, message=FALSE}
+
+#Appendix: Plots
+```{r echo=F, message=FALSE, fig.height= 4}
 library(reshape)
+library(ggplot2)
 meltedmtcars <- melt(mtcars, id.vars = c("mpg", "am"))
 p <- ggplot(meltedmtcars, aes(x=value, y=mpg, color=am)) + geom_point()
-p + facet_wrap( ~ variable, ncol = 3)
+p <- p + facet_wrap( ~ variable, ncol = 3) + 
+        ggtitle("Fig.1: Impact of different variables on MPG based on transmission type")+ xlab("Value") +  ylab("Miles per Gallon")
+p <- p + scale_color_discrete(name="Transmission \nType", labels=c("Automatic", "Manuall"))
+p
+```
+
+
+```{r echo=F, message=F}
+qplot(predict(fitlm2),resid(fitlm2), xlab = "Fitted values", ylab = "Residuals", main = "Fig.2: Residual plot") + geom_hline(yintercept = 0, color="red")
 ```
