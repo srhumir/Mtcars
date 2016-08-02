@@ -1,8 +1,8 @@
 ---
-title: "MPG Analysis"
+title: "Analysis of feuel consumption using multivariable regression"
 author: "Reza"
 date: "20 May 2016"
-output: html_document
+output: pdf_document
 ---
 
 #Summary
@@ -11,53 +11,94 @@ The goal of this study is to check whether automatic transmission has an impact 
 At the end we will see that, although it seems at the first look that automatic transmission decreases MPG but this is not an statistically meaningful conclusion. 
 
 #Data Explanation
-The data was extracted from the 1974 Motor Trend US magazine, and includes fuel consumotion (mpg), Number of cylinders(cyl), Displacement (disp), Gross horsepower(hp), Rear axle ratio (drat), Weight (wt), 1/4 mile time (qsec), V/S (vs), Transmission (am, 0 = automatic, 1 = manual), Number of forward gears (gear), Number of carburetorsof (carb),  for 32 automobiles (1973-74 models).
+The data was extracted from the 1974 Motor Trend US magazine, and includes fuel consumption (mpg), Number of cylinders(cyl), Displacement (disp), Gross horsepower(hp), Rear axle ratio (drat), Weight (wt), 1/4 mile time (qsec), V/S (vs), Transmission (am, 0 = automatic, 1 = manual), Number of forward gears (gear), Number of carburetors of (carb),  for 32 automobiles (1973-74 models).
 
 ```{r echo=FALSE, message=F}
 data(mtcars)
 mtcars$am <- factor(mtcars$am)
 mtcars$vs <- factor(mtcars$vs)
 ```
-Comparing the MPG of automatic transmissited cars vs manaully transsmitted ones (`r mean(mtcars$mpg[mtcars$am == 0])`, `r mean(mtcars$mpg[mtcars$am ==1])`) make us think that automatic transsmission has a negaive imoact on fuel ecomomy. But having a closer look at the data set (see Fig. 1), reveals that in particular in the case of weight(wt) and rear axle ratio (drat) variables, in one hand they both have impact on MPG and on the other hand, they can roughly separate automatic and manually transmitted cars. In other words more weight means less mpg also cars with automatic transmission are heavier in this data set. So we use multivariable regression analysis to face this lack of data in the dataset.
+Comparing the MPG of automatic transmissible cars vs manually transmitted ones (`r mean(mtcars$mpg[mtcars$am == 0])`, `r mean(mtcars$mpg[mtcars$am ==1])`) make us think that automatic transmission has a negative impact on fuel economy. But having a closer look at the data set (see Fig. 1), reveals that in particular in the case of weight(wt) and rear axle ratio (drat) variables, in one hand they both have impact on MPG and on the other hand, they can roughly separate automatic and manually transmitted cars. In other words more weight means less mpg also cars with automatic transmission are heavier in this data set. So we use multivariate regression analysis to face this lack of data in the dataset.
 
 #Regression analysis
 
 For start we fit a linear model for mpg vs all other variables and look at the coefficients of the model.
 ```{r echo=F, message=F}
-fitlm1 <- lm(mpg ~ ., data = mtcars)
-round(coef(fitlm1),2)
+library(knitr)
+library(caret)
+fargs <- list(decimal.mark = ".", big.mark = ",", align="l")
+fitlm1 <- train(mpg ~ ., data = mtcars, method="lm")
+fitlm1.coef <- t(data.frame(Value=round(coef(fitlm1$finalModel),2)))
+row.names(fitlm1.coef) <- ""
+kable(fitlm1.coef, format.args = fargs,caption = "Coefficients of linear model")
 ```
 
-It says that keeping other factors constant, the change from automatic transsmition to manuall increases mpg by `r round(coef(fitlm1)[9],2)` miles per gallon. But the confidence interval for this qoefiicent is (`r round(confint(fitlm1)[9,],2)`) containg $0$ which means that this improvement is not statisically significant. But there might be extra variables in the model which introduce extra variance. To seek for that we use the varible importance factor (VIF). These are the VIF for the model.
+It says that keeping other factors constant, the change from automatic transmission to manual increases mpg by `r round(fitlm1$finalModel$coefficients[9],2)` miles per gallon. But the confidence interval for this coefficient is (`r round(confint(fitlm1$finalModel)[9,],2)`) containing $0$ which means that this improvement is not statistically significant. But there might be extra variables in the model which introduce extra variance. To seek for that we use the variable inflation factor (VIF). These are the VIF for the model.
 
 ```{r echo=F, message=F}
 library(car)
-round(vif(fitlm1),2)
-maxvif <- tail(order(vif(fitlm1)),2)
+kable(t(round(vif(fitlm1$finalModel),2)), format.args = fargs,caption = "Variable inflation factors")
+# maxvif <- tail(order(vif(fitlm1$finalModel)),2)
 ```
 
-`r names(vif(fitlm1))[maxvif]` have the most vif i.e. their impact on the model is respectively  $`r round(vif(fitlm1),2)[maxvif]`$ times more as if they were  diagonal to other variables. Now we omit these variables and fit a new model.
+On the other hand one can look at the importance index of the variables included in the model.
+
 ```{r echo=F, message=F}
-mtcars2 <- mtcars[, -(maxvif+1)]
+# imp <- data.frame(Variable.Name = rownames(varImp(fitlm1)$importance),
+                  # Overall.Importance = round(varImp(fitlm1)$importance,2))
+imp <- round(varImp(fitlm1)$importance,2)
+names(imp) <- c("Overall Importance")
+# imp[,1] <- as.character(imp[,1])
+# row.names(imp) <- NULL
+# ord <- order(imp$`Overall Importance`, decreasing = T) 
+kable(t(imp), format.args = fargs, row.names = T,
+      caption = "Importance index")
+```
+
+"cyl", "vs" and "carb" variables have the least importance index and the quite high inflation factors. So there is a big chance that they are extra variables which might make bias in the perdition. Therefore we omit them and fit a new model
+
+
+```{r, echo=F, message=F, warning=F}
+mtcars2 <- mtcars[,-which(names(mtcars) %in% c("cyl", "vs", "carb"))]
 fitlm2 <- lm(mpg ~ ., data = mtcars2)
-round(coef(fitlm2),2)
-```
-The amt coefficient is a bit smaller but not that much changed. It is still insignificant with $95\%$ confidence interval of ($`r round(confint(fitlm2)[7,],2)`$). Let us take a look at the VIF's of the new model.
-```{r echo=F, message=F}
-round(vif(fitlm2),2)
-maxvif2 <- which(vif(fitlm2)==max(vif(fitlm2)))
+fitlm2.coef <- t(data.frame(Value=round(coef(fitlm2),2)))
+row.names(fitlm2.coef) <- ""
+kable(fitlm2.coef, format.args = fargs,caption = "Coefficients of the new linear model")
 ```
 
-The VIF's of this last model, although not ideally small,  are in a quite similar range. So there is no sense in ommiting any of them. Now for assurance we comare the  models with anova function.
-```{r echo=F, message=F}
-anova(fitlm2, fitlm1)
-```
-The P-value is quite high, so using these two varaibales was not actually necessary. 
+The "amt" coefficient is a bit bigger but not that much changed. It is still insignificant with $95\%$ confidence interval of ($`r round(confint(fitlm2)[7,],2)`$). Let us take a look at the VIF's of the new model.
 
-To get sure abput the validity of the last model I plot the residual plot (see Fig2).As you can see there is no special trend in the residual plot. So the model appears to be valid. 
+```{r echo=F, message=F}
+kable(t(round(vif(fitlm2),2)), format.args = fargs,caption = "Variable inflation factor in the new linear model")
+# maxvif2 <- which(vif(fitlm2)==max(vif(fitlm2)))
+```
+
+As the inflation of the variable "dis" is too high, we omit it as well for the last model.
+
+```{r, echo=F, message=F, warning=F}
+mtcars3 <- mtcars[,-which(names(mtcars) %in% c("cyl", "vs", "carb", "disp"))]
+fitlm3 <- lm(mpg ~ ., data = mtcars3)
+fitlm3.coef <- t(data.frame(Value=round(coef(fitlm3),2)))
+row.names(fitlm3.coef) <- ""
+kable(fitlm3.coef, format.args = fargs,caption = "Coefficients of the third linear model")
+```
+
+Does not show that much change in coefficient also the $95\%$ confidence interval is ($`r round(confint(fitlm3)[7,],2)`$), which means non significant. 
+But to get sure that omitting these variables was harmless, I ran a analysis of variance between two models. Here are the results
+
+```{r, echo=F, message=F}
+fitlm1 <- lm(mpg~., data=mtcars)
+kable(round(anova(fitlm3,fitlm2, fitlm1),2), format.args = fargs,
+      caption = "Analysis of variance between three models")
+```
+
+
+The P-value (columns Pr(>F))between the third and second model is smaller than $0.95$ which means that we shouldn't have omitted "disp". But the P-Value is high in comparing second and first models which means that omitting the variables "cyl", "vs" and "carb" was a good idea. So we stick on our second model with shows an *nonsignificant* $`r round(fitlm2$coefficients[7],2)`$ miles per gallon increase in MPG in manual transmitted cars.
+
+To get sure about the validity of the last model I plot the residual plot (see Fig.2). As you can see there is no special trend in the residual plot. So the model appears to be valid. 
 
 #Conclution
-Although a manually transmitted car seems to show better fuel economy, this improvement does not appear to be significant. It should be noted that this analysis is done on an old and small dataset, so is not that realiable. For assurance more investigation needs to be done.
+Although a manually transmitted car seems to show better fuel economy, this improvement does not appear to be significant. It should be noted that this analysis is done on an old and small dataset, so is not that reliable. For assurance more investigation needs to be done.
 
 #Appendix: Plots
 ```{r echo=F, message=FALSE, fig.height= 4}
@@ -75,3 +116,6 @@ p
 ```{r echo=F, message=F}
 qplot(predict(fitlm2),resid(fitlm2), xlab = "Fitted values", ylab = "Residuals", main = "Fig.2: Residual plot") + geom_hline(yintercept = 0, color="red")
 ```
+
+#Reference
+- mtcars dataset in R.
